@@ -5,17 +5,23 @@
 #define STRIP_CNT 4
 #define BUTTON_PIN 11
 
-#define RAINBOW_STATE 1
-#define CMY_STATE 2
-#define TOTAL_STATES 3
+#define OFF_STATE 0
+#define RANDOM_STATE 1
+#define RAINBOW_STATE 2
+#define FAST_RAINBOW_STATE 3
+#define DIM_STATE 4
+#define CMY_STATE 5
+
+#define TOTAL_STATES 6
  
-int state = RAINBOW_STATE;  //lighting state 
+int state = 1;  //lighting state 
 int buttonState = 0 ;
 int lastButtonState = 0;     // previous state of the button
 
 Adafruit_NeoPixel strips[STRIP_CNT];
-uint32_t cyan, magenta, yellow, purple, off; 
+uint32_t cyan, magenta, yellow, purple, off, white; 
 float rainbowStep =0;
+int rainDrops[STRIP_CNT]  ; //should be length
 
 void setup() {
   
@@ -31,23 +37,27 @@ void setup() {
   for (int i = 0; i < STRIP_CNT ; i ++) {
     strips[i].begin();
     strips[i].setBrightness(50);// 85, 1/3 brightness of 255
+    //init randome rain drop initial position 
+    rainDrops[i] = random (0, PIXEL_CNT+2);
   }
-
+  
   //COLOR
    cyan = strips[0].Color(0, 174, 239);
    magenta = strips[0].Color(236, 0, 140);
    yellow = strips[0].Color(255, 242, 0);
    purple = strips[0].Color(240, 0, 240);
    off =  strips[0].Color(0, 0, 0);
-
+   white = strips[0].Color(255,255,255);
 // TIME
   float rainbowStep = 0;  
+  
 
 
   //startup animation
+   colorTravel(purple, 30);
    colorTravel(purple, 20);
    colorTravel(purple, 15);
-
+   
 }
 
 void loop() {
@@ -72,12 +82,62 @@ void loop() {
 
     switch (state){
       case RAINBOW_STATE : 
-        allStripsRainbow(rainbowStep += 0.08);
+        rainbowStep += 0.05;
+        allStripsRainbow(rainbowStep);
+        if (rainbowStep > 255 ) {
+          rainbowStep = (int(rainbowStep))%255 ;
+        }
+        break; 
+        
+      case FAST_RAINBOW_STATE:
+        rainbowStep += 1.01 ;
+        allStripsRainbow(rainbowStep);
         if (rainbowStep > 255 ) {
           rainbowStep = (int(rainbowStep))%255 ;
         }
         break; 
         case CMY_STATE:
+          colorWipe(0,cyan); 
+          colorWipe(1,magenta);
+          colorWipe(2,yellow);
+          colorWipe(3,off);
+        break; 
+        case RANDOM_STATE:
+        {
+         
+          
+            for (int i = 0; i < STRIP_CNT*PIXEL_CNT; i++) {
+                 float temp = random(100)/100.0; 
+            
+                 int p = i%PIXEL_CNT; //pixel on strip 
+                 int s = floor (i / PIXEL_CNT) ; //current strip
+                 
+                 if(temp<0.05){
+                    strips[s].setPixelColor(p, purple);
+//                    strips[s].setPixelColor(p+1, purple);
+                
+                  }else if(temp>0.5) {
+                     strips[s].setPixelColor(p, off);
+//                     strips[s].setPixelColor(p-1, off);
+                  }
+                  strips[s].show();
+            }
+        }
+        break;
+        case DIM_STATE: 
+          float temp ; 
+          for (int s  = 0;s < STRIP_CNT ; s ++) {
+            for(int p = 0; p<PIXEL_CNT;p++){
+              temp = 255*p/PIXEL_CNT/3; 
+             strips[s].setPixelColor(p, 
+               strips[0].Color(temp,temp,temp));
+            }
+            
+            strips[s].show();
+          }
+          
+        break; 
+        case OFF_STATE: 
           for (int i = 0; i < STRIP_CNT ; i ++) {
             colorWipe(i, off); // dark 
           }
@@ -88,7 +148,7 @@ void loop() {
 
 }
 
-//LIBRARY ISSUE. DOES NOT WORK 
+/*LIBRARY ISSUE. DOES NOT WORK 
 void colorStepWipe(uint32_t c, uint8_t wait) {
 
   for (int i = 0; i < STRIP_CNT*PIXEL_CNT; i++) {
@@ -105,6 +165,7 @@ void colorStepWipe(uint32_t c, uint8_t wait) {
     
   }
 }
+*/
 
 
 // Fill the dots one after the other with a color
@@ -122,6 +183,26 @@ void colorTravel(uint32_t c, uint8_t wait) {
     strips[s].show();
   }
 }
+//
+////random drops of pixel
+//void colorRain (uint32_t c, uint8_t wait){
+//   int droplet;
+//   for (uint8_t s=0; s< STRIP_CNT; s++){
+//    
+//      droplet = rainDrops[s]; 
+//      if (droplet < PIXEL_CNT){
+//         strips[s].setPixelColor(droplet, c);
+////         strips[s].setPixelColor(droplet, c);
+//      }
+//      droplet ++ ; 
+//      if (droplet>PIXEL_CNT){
+//        droplet = random (0, PIXEL_CNT+2);
+//      }
+//      strips[s]= droplet ;
+//      
+//   }
+///////////////// strips[s].show();
+//}
 
 
 //
