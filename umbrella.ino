@@ -5,19 +5,33 @@
 #define STRIP_CNT 4
 #define BUTTON_PIN 11
 
-int state = 0; 
+#define RAINBOW_STATE 1
+#define CMY_STATE 2
+#define TOTAL_STATES 3
+ 
+int state = RAINBOW_STATE;  //lighting state 
+int buttonState = 0 ;
+int lastButtonState = 0;     // previous state of the button
+
 Adafruit_NeoPixel strips[STRIP_CNT];
 uint32_t cyan, magenta, yellow, purple, off; 
 float rainbowStep =0;
 
 void setup() {
-  pinMode(BUTTON_PIN, INPUT);
+  
   Serial.begin(9600);
   Serial.println("-----");
+  
+  pinMode(BUTTON_PIN, INPUT);
+//INIT
   strips[0] = Adafruit_NeoPixel(PIXEL_CNT, 3);
   strips[1] = Adafruit_NeoPixel(PIXEL_CNT, 5);
   strips[2] = Adafruit_NeoPixel(PIXEL_CNT, 6);
   strips[3] = Adafruit_NeoPixel(PIXEL_CNT, 9);
+  for (int i = 0; i < STRIP_CNT ; i ++) {
+    strips[i].begin();
+    strips[i].setBrightness(50);// 85, 1/3 brightness of 255
+  }
 
   //COLOR
    cyan = strips[0].Color(0, 174, 239);
@@ -29,40 +43,48 @@ void setup() {
 // TIME
   float rainbowStep = 0;  
 
-//INIT 
-  for (int i = 0; i < STRIP_CNT ; i ++) {
-    strips[i].begin();
-    strips[i].setBrightness(50);// 85, 1/3 brightness of 255
-  }
 
   //startup animation
    colorTravel(purple, 20);
    colorTravel(purple, 15);
 
-// 
-
-//  
 }
 
 void loop() {
-    if (digitalRead(BUTTON_PIN) && state==0){
-      Serial.println("button push") ;
-      state=1;
-//      state = state%2;
-    }
-    if(state ==0){
-      allStripsRainbow(rainbowStep += 0.08);
-      if (rainbowStep > 255 ) {
-        rainbowStep = (int(rainbowStep))%255 ;
-      }
-    }
-    else{
-      for (int i = 0; i < STRIP_CNT ; i ++) {
-        colorWipe(i, off); // dark 
-      }
-
+  
+   buttonState = digitalRead(BUTTON_PIN);
+//   Serial.println(buttonState); 
+   if (buttonState != lastButtonState) {
+    // if the state has changed, increment the counter
+    if (buttonState == LOW) {
+      //dropping edge 
+//      Serial.print ("drop ");
+      state++; 
+      state = state%TOTAL_STATES;  //loop 
+      Serial.println(state); 
       
+    }else {
+//      Serial.print("raise "); 
     }
+   }
+
+   lastButtonState = buttonState; 
+
+    switch (state){
+      case RAINBOW_STATE : 
+        allStripsRainbow(rainbowStep += 0.08);
+        if (rainbowStep > 255 ) {
+          rainbowStep = (int(rainbowStep))%255 ;
+        }
+        break; 
+        case CMY_STATE:
+          for (int i = 0; i < STRIP_CNT ; i ++) {
+            colorWipe(i, off); // dark 
+          }
+        break; 
+        
+    }
+
 
 }
 
